@@ -1,2 +1,2 @@
-Different kind of practices and tasks from my education. 
+Taajuuslaskuri ja kanttigeneraattori.
 #edu-portfolio
