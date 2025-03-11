@@ -1,0 +1,22 @@
+HW
+Osaluettelo
+-	Signaalilaatikko
+-	DC Jännitelähde
+-	Vastukset 1k, 3.2k,480 ohm
+-	LN358N – operationaalinen vahvistin
+-	Hyppypiuhat
+-	Arduino Nano
+-	Ethernet – moduuli
+-	Ohjaava näppäimistö
+-	LCD-näyttö
+
+U1 op. vahvistin toimii bufferina negatiivinen takaisinkytkentä.
+U2 op. vahvistin on signaalinvahvistimena. 
+Vastukset kytkennässä signaalinvahvistimen vaatimuksien mukaisesti. R4 on estämässä signaalipiikkien pääsemisen Arduino Nanon luo.
+
+SW
+
+Arduino Nano muokkaa signaalin jännitteen ja kääntää sen digitaaliseksi ja ohjaa sen serverin tietokannalle. Serverin tietokannalta kerätään halutut tiedot, ja selain muotoilee ne visuaaliseen muotoon. Taustalla toimii sql-tietokanta. Javascript – skripti sekä php-backend koodi.  
+Projektin rajapintoina toimii jännite signaali, Arduino Nano, Rasperry, serverin tietokanta ja UI (user interface). Sen funktioina jännitesignaalin rajapinnalla piirilevy joka on signaalinvahvistin. Arduino Nano joka ohjaa datan eteenpäin sen sisälle pyörivän koodin mukaisesti kohti Rasperryä, joka keräilee signaaliboksin kaikkia yhteyksiä, ja lähettää sen tietokantaan. Tietokannasta se ajetaan php-backendin koodin mukaisesti kohti UI:ta. GoogleChart skripti JavaScript muodossa joka muotoilee haluttuun muotoon UI:n.
+
+
