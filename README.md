@@ -1,2 +1,2 @@
-Different kind of practices and tasks from my education. 
+Opintojen yksi ICT-projektin kytkentä, main koodi ja raportti.
 #edu-portfolio
