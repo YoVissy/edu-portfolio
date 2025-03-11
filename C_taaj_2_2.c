@@ -2,37 +2,37 @@
 
 /*   kutistettu versio 4 :  */
 
-// V4: Muutettu nayta-funktion toiminta: param. ekan merkin positio, tyhjätään alkunollat
-//	Volatilet poistettu alkutilavarauksista. Näyttöpusk. alustus muutettu.
+// V4: Muutettu nayta-funktion toiminta: param. ekan merkin positio, tyhjï¿½tï¿½ï¿½n alkunollat
+//	Volatilet poistettu alkutilavarauksista. Nï¿½yttï¿½pusk. alustus muutettu.
 // 	LCD_ohjaus -funktio yksinkertaistettu
 
 #include <avr/io.h>		/* i/o-symbolit: C:\WinAVR-20090313\avr\include\avr\iom128.h  */
 #include <avr/interrupt.h>	/* Keskeytysmakrot */
-#include <avr/pgmspace.h>	/* FLASH-ohjelmamuistin käsittely */
+#include <avr/pgmspace.h>	/* FLASH-ohjelmamuistin kï¿½sittely */
 
 uint8_t 
-	Laskuri_1s = 1,	// Pääohjelmasilmukan 1s aikalaskuri
-	Laskuri_02s = 4,	// Pääohjelmasilmukan 0,2s aikalaskuri
-	KeskLippu = 0,	// Jos =1, TIMER1_COMPA-keskeytys tapahtunut (10ms välein)
-	B1lask,B2lask,	// Kytkinvärähtelyn eliminointiin käytettävät laskurit kytkimille B1 ja B2
-	Kytk,			// Kytkinportin sisältö lukuhetkellä
-	db[32],		// Näyttöpuskuri
-	dindex,		// Näyttöpuskurin indeksi tulostustilanteessa
+	Laskuri_1s = 1,	// Pï¿½ï¿½ohjelmasilmukan 1s aikalaskuri
+	Laskuri_02s = 4,	// Pï¿½ï¿½ohjelmasilmukan 0,2s aikalaskuri
+	KeskLippu = 0,	// Jos =1, TIMER1_COMPA-keskeytys tapahtunut (10ms vï¿½lein)
+	B1lask,B2lask,	// Kytkinvï¿½rï¿½htelyn eliminointiin kï¿½ytettï¿½vï¿½t laskurit kytkimille B1 ja B2
+	Kytk,			// Kytkinportin sisï¿½ltï¿½ lukuhetkellï¿½
+	db[32],		// Nï¿½yttï¿½puskuri
+	dindex,		// Nï¿½yttï¿½puskurin indeksi tulostustilanteessa
 	rivinsiirto,		// 1, kun lcd:lle on kirjoitettu siirtokomento alariville
-	tulostus_kesken,	// 1, kun 32 merkin tulostus lcd:lle on meneillään
-	PB6_tila = 0;	// Kanttigeneraattorin lähtösignaalin tila (PINB&0x40) PB6-nastassa, luetaan compb-kesk.palv.alussa
+	tulostus_kesken,	// 1, kun 32 merkin tulostus lcd:lle on meneillï¿½ï¿½n
+	PB6_tila = 0;	// Kanttigeneraattorin lï¿½htï¿½signaalin tila (PINB&0x40) PB6-nastassa, luetaan compb-kesk.palv.alussa
 uint16_t 
-	KesHetki,		// Pääohjelmasilmukan ajastus: TIMER1_COMPA-keskeytyshetki		
+	KesHetki,		// Pï¿½ï¿½ohjelmasilmukan ajastus: TIMER1_COMPA-keskeytyshetki		
 	OVFlaskuri = 0,	// Timer1:n ylivuotokappalelaskuri
-	puls_lkm=0,		// Mitattavan kanttiaallon nousureunojen lukumäärä
-	kaappausrek,	// Mitattavan kanttiaallon viimeisimmän nousureunan ajanhetki (ICR1)
+	puls_lkm=0,		// Mitattavan kanttiaallon nousureunojen lukumï¿½ï¿½rï¿½
+	kaappausrek,	// Mitattavan kanttiaallon viimeisimmï¿½n nousureunan ajanhetki (ICR1)
 	oc1b_hetki,		// Tuotettavan kantin reunan ajanhetki
 	tilan_0_kesto,	// Tuotettavan kantin 0- ja 1-tilojen kestoajat
 	tilan_1_kesto;
 int16_t
-	nyt_aika,		// apumuuttuja, Timer1:stä luettu aika
-	lcd_aika;		// Seuraavan merkin kirjoitusajankohta LCD:lle (n. 100us välein)
-uint32_t 		//Vertaa käännöstuloksia, jos nämä olisivat long eli int32_t
+	nyt_aika,		// apumuuttuja, Timer1:stï¿½ luettu aika
+	lcd_aika;		// Seuraavan merkin kirjoitusajankohta LCD:lle (n. 100us vï¿½lein)
+uint32_t 		//Vertaa kï¿½ï¿½nnï¿½stuloksia, jos nï¿½mï¿½ olisivat long eli int32_t
 	ed_nousuhetki, 	// Mitattavan kantin nousureunan hetki
 	nousuhetki, 		// Mitattavan kantin nousureunan hetki
 	jakso;  		// Mitattavan kantin jaksonaika
@@ -41,12 +41,12 @@ uint8_t
 	f_ovf;			// =1, kun mitattava taajuus on liian suuri, CAPT-kes.palvelu ei ehdi suoriutua
 uint16_t
 	jaksolkm,		// Edellisen noin 1 s:n aikana tulleiden nousureunojen lkm, joista taajuus lasketaan
-	n1s_puls_lkm;	// Parhaillaan kuluvan sekunnin aikana tulleiden nousureunojen lukumäärä
+	n1s_puls_lkm;	// Parhaillaan kuluvan sekunnin aikana tulleiden nousureunojen lukumï¿½ï¿½rï¿½
 
 uint32_t
 	laskentajakso,	// Aika, jonka kuluessa on tullut "n1s_puls_lkm" kpl.nousureunoja
 	n1s,			// sama kuin ed.
-	n1s_alkuhetki;	// Ed. aikapätkän alkuhetken kellonaika
+	n1s_alkuhetki;	// Ed. aikapï¿½tkï¿½n alkuhetken kellonaika
 float
 	ftaajuus;		// = nousureunojen lukum. jaettuna siihen kuluneella ajalla
 
@@ -54,7 +54,7 @@ const uint8_t alkuteksti[] PROGMEM =	// Merkkijono ohjelmamuistissa
 "0.00000 Hz      "
 "      0 us      ";
 
-const int32_t dek[]={1,10,100,1000,10000,100000,1000000,10000000,100000000}; // Lukujono missä???
+const int32_t dek[]={1,10,100,1000,10000,100000,1000000,10000000,100000000}; // Lukujono missï¿½???
 const float fdek[]={1,10,100,1000,1e4,1e5,1e6};
 
 void nayta (long, uint8_t, uint8_t);
@@ -74,35 +74,35 @@ ISR (TIMER1_OVF_vect)		// Timer1-ylivuotokeskeytyspalvelu (n. 3 us)
 }
 
 /*******************************************************************************************/
-ISR (TIMER1_COMPA_vect)		// Timer1-A-vertailukeskeytyspalvelu (n. 5 us), suoritetaan 10 ms välein
-{						// käytetään pääohjelmasilmukan ajastamiseen
-	KesHetki = KesHetki + 20000;	// Uuden compa-kesk. viritys 10 ms päähän. Timer askeltaa 0,5us välein, 20000*0,5us = 10 ms
+ISR (TIMER1_COMPA_vect)		// Timer1-A-vertailukeskeytyspalvelu (n. 5 us), suoritetaan 10 ms vï¿½lein
+{						// kï¿½ytetï¿½ï¿½n pï¿½ï¿½ohjelmasilmukan ajastamiseen
+	KesHetki = KesHetki + 20000;	// Uuden compa-kesk. viritys 10 ms pï¿½ï¿½hï¿½n. Timer askeltaa 0,5us vï¿½lein, 20000*0,5us = 10 ms
 	OCR1A = KesHetki;
-	KeskLippu = 1;			// Pääohjelman ajastuslipun asetus
+	KeskLippu = 1;			// Pï¿½ï¿½ohjelman ajastuslipun asetus
 }
 
 /*******************************************************************************************/
 ISR (TIMER1_COMPB_vect)		// Timer1-B-vertailukeskeytyspalvelu (n.10 us), suoritetaan aina,
-{						// kun oc1b-lähtö on kääntynyt eli on saatu tuotettavan kanttiaallon reuna.
+{						// kun oc1b-lï¿½htï¿½ on kï¿½ï¿½ntynyt eli on saatu tuotettavan kanttiaallon reuna.
 
-	PB6_tila = PINB & 0x40;			// Luetaan tämänhetkinen oc1b/PB6-bitin tila
-	if (PB6_tila == 0){				// jos lähtöbitti on nyt 0, ohjelmoidaan nousureuna
+	PB6_tila = PINB & 0x40;			// Luetaan tï¿½mï¿½nhetkinen oc1b/PB6-bitin tila
+	if (PB6_tila == 0){				// jos lï¿½htï¿½bitti on nyt 0, ohjelmoidaan nousureuna
 		oc1b_hetki += tilan_0_kesto;	// Seuraavan reunan hetki= edellisen reunan hetki + tilan_0_kesto
-		TCCR1A |=  0x30;			// viritetään nousureuna
+		TCCR1A |=  0x30;			// viritetï¿½ï¿½n nousureuna
 		OCR1B = oc1b_hetki;
 	}
-	else {						// jos lähtöbitti on nyt 1, ohjelmoidaan laskureuna
+	else {						// jos lï¿½htï¿½bitti on nyt 1, ohjelmoidaan laskureuna
 		oc1b_hetki += tilan_1_kesto;
-		TCCR1A &= ~0x10;		// nyt viritetään laskur.
+		TCCR1A &= ~0x10;		// nyt viritetï¿½ï¿½n laskur.
 		OCR1B = oc1b_hetki;
 	}
 }
 
 /**************************************************************************************************/
 ISR (TIMER1_CAPT_vect)		// Timer1-kaappauskeskeytyspalvelu  (n. 17 us)
-{						// Tähän tullaan aina, kun ICP1/PD4-nastaan tulee mitattavan signaalin nousureuna
-	puls_lkm++;				// Nousureunojen lukumäärälaskurin kasvatus
-	kaappausrek = ICR1;		// Luetaan nousureunan tapahtumisen ajanhetki kaappausrekisteristä
+{						// Tï¿½hï¿½n tullaan aina, kun ICP1/PD4-nastaan tulee mitattavan signaalin nousureuna
+	puls_lkm++;				// Nousureunojen lukumï¿½ï¿½rï¿½laskurin kasvatus
+	kaappausrek = ICR1;		// Luetaan nousureunan tapahtumisen ajanhetki kaappausrekisteristï¿½
 	ed_nousuhetki = nousuhetki;	
 	// nousuhetki = ((unsigned long)OVFlaskuri<<16)+(unsigned long)kaappausrek; // Koostetaan 32-bittinen "kellonaika"
 
@@ -112,25 +112,25 @@ ISR (TIMER1_CAPT_vect)		// Timer1-kaappauskeskeytyspalvelu  (n. 17 us)
 	*((uint8_t *) &nousuhetki + 0) = *((uint8_t *) &kaappausrek+0);
 
 
-	if ((TIFR&0x04) && (((*((uint8_t *) &kaappausrek +1)) & 0x80)==0)) 	// Jos Timer1-ylivuoto oli palvelematta kaappaushetkellä,
+	if ((TIFR&0x04) && (((*((uint8_t *) &kaappausrek +1)) & 0x80)==0)) 	// Jos Timer1-ylivuoto oli palvelematta kaappaushetkellï¿½,
 	{
-		(*((uint16_t *) &nousuhetki + 1))++;		// korjataan "kellonaika" lisäämällä ykkönen 4-tavuisen muuttujan ylempään wordiin.
+		(*((uint16_t *) &nousuhetki + 1))++;		// korjataan "kellonaika" lisï¿½ï¿½mï¿½llï¿½ ykkï¿½nen 4-tavuisen muuttujan ylempï¿½ï¿½n wordiin.
 	}
  
-	jakso = nousuhetki - ed_nousuhetki;		// Kahden peräkkäisen nousureunan aikaero = jaksonaika
+	jakso = nousuhetki - ed_nousuhetki;		// Kahden perï¿½kkï¿½isen nousureunan aikaero = jaksonaika
 
 	n1s_puls_lkm++;					// Nousureunojen lkm n. 1s laskenta-aikana
-	n1s = nousuhetki - n1s_alkuhetki;		// Tarkka kestoaika ed. mainitun pulssimäärän tuloon
+	n1s = nousuhetki - n1s_alkuhetki;		// Tarkka kestoaika ed. mainitun pulssimï¿½ï¿½rï¿½n tuloon
 	if (n1s>2000000)					// Jos 1 s laskenta-aika on ylittynyt
 	{
-		laskentajakso=n1s;				// Kopioidaan tiedot pääohjelmaa varten
+		laskentajakso=n1s;				// Kopioidaan tiedot pï¿½ï¿½ohjelmaa varten
 		jaksolkm=n1s_puls_lkm;			//
 		n1s_puls_lkm=0;				//	ja alustetaan uutta sarjaa varten
 		n1s_alkuhetki=nousuhetki;
-		naytolle=1;					// Pääohjelmalle tieto, että taajuus voidaan laskea
+		naytolle=1;					// Pï¿½ï¿½ohjelmalle tieto, ettï¿½ taajuus voidaan laskea
 	}
-	if (TIFR&0x20)			//ICF1		Jos uusi reuna on jo nyt tullut, vaikka tästäkään keskeytyksestä
-	{	TIMSK &= ~0x20;		//TICIE1		ei olla ehditty ulos, kielletään CAPT-kesk. ja
+	if (TIFR&0x20)			//ICF1		Jos uusi reuna on jo nyt tullut, vaikka tï¿½stï¿½kï¿½ï¿½n keskeytyksestï¿½
+	{	TIMSK &= ~0x20;		//TICIE1		ei olla ehditty ulos, kielletï¿½ï¿½n CAPT-kesk. ja
 		f_ovf=1;					//  	laitetaan "taajuusylivuoto"-lippu merkiksi
 	}
 }
@@ -138,30 +138,30 @@ ISR (TIMER1_CAPT_vect)		// Timer1-kaappauskeskeytyspalvelu  (n. 17 us)
 void painiketoiminnot(void)
 {
 		Kytk = PINA;							
-												// B1-painikkeen käsittely (PINA.0)
-		if (((Kytk & 0b0001) == 0b0001) && (B1lask > 0))  B1lask--;		//Jos kytk. ei enää paineta mutta laskuri ei vielä 0, vähennä laskuria
-		else if (((Kytk & 0b0001) == 0) && (B1lask > 0)) B1lask=9;		//Jos kytk. painettuna kun laskuri ei vielä ole 0, laskuriin alkuarvo 9
+												// B1-painikkeen kï¿½sittely (PINA.0)
+		if (((Kytk & 0b0001) == 0b0001) && (B1lask > 0))  B1lask--;		//Jos kytk. ei enï¿½ï¿½ paineta mutta laskuri ei vielï¿½ 0, vï¿½hennï¿½ laskuria
+		else if (((Kytk & 0b0001) == 0) && (B1lask > 0)) B1lask=9;		//Jos kytk. painettuna kun laskuri ei vielï¿½ ole 0, laskuriin alkuarvo 9
 		else if (((Kytk & 0b0001) == 0) && (B1lask == 0))			//Jos kytk. painetaan laskurin ollessa 0, alkaa toiminta
 		{
-			B1lask = 9;								//Värähtelynpoistolaskurin viritys
-			// TÄHÄN TEHTÄVÄT, JOTKA TEHDÄÄN, KUN ON PAINETTU B1-PAINIKETTA
+			B1lask = 9;								//Vï¿½rï¿½htelynpoistolaskurin viritys
+			// Tï¿½Hï¿½N TEHTï¿½Vï¿½T, JOTKA TEHDï¿½ï¿½N, KUN ON PAINETTU B1-PAINIKETTA
 		}
 
-		if (((Kytk & 0b0010) == 0b0010) && (B2lask > 0))  B2lask--;		//Jos kytk. ei enää paineta mutta laskuri ei vielä 0, vähennä laskuria
-		else if (((Kytk & 0b0010) == 0) && (B2lask > 0)) B2lask=9; 		//Jos kytk. painettuna kun laskuri ei vielä ole 0, laskuriin alkuarvo 9
+		if (((Kytk & 0b0010) == 0b0010) && (B2lask > 0))  B2lask--;		//Jos kytk. ei enï¿½ï¿½ paineta mutta laskuri ei vielï¿½ 0, vï¿½hennï¿½ laskuria
+		else if (((Kytk & 0b0010) == 0) && (B2lask > 0)) B2lask=9; 		//Jos kytk. painettuna kun laskuri ei vielï¿½ ole 0, laskuriin alkuarvo 9
 		else if (((Kytk & 0b0010) == 0) && (B2lask == 0))			//Jos kytk. painetaan laskurin ollessa 0, alkaa toiminta
 		{
-			B2lask = 9;								//Värähtelynpoistolaskurin viritys
-			/* TÄHÄN TEHTÄVÄT, JOTKA TEHDÄÄN, KUN ON PAINETTU B2-PAINIKETTA  */
+			B2lask = 9;								//Vï¿½rï¿½htelynpoistolaskurin viritys
+			/* Tï¿½Hï¿½N TEHTï¿½Vï¿½T, JOTKA TEHDï¿½ï¿½N, KUN ON PAINETTU B2-PAINIKETTA  */
 		}
 
-		/* TÄHÄN SEURAAVAN PAINIKKEEN KÄSITTELY VASTAAVASTI KUIN YLLÄ OLEVA  */
+		/* Tï¿½Hï¿½N SEURAAVAN PAINIKKEEN Kï¿½SITTELY VASTAAVASTI KUIN YLLï¿½ OLEVA  */
 
-		/* TÄHÄN SITÄ SEURAAVAN PAINIKKEEN KÄSITTELY VASTAAVASTI KUIN YLLÄ OLEVA  */
+		/* Tï¿½Hï¿½N SITï¿½ SEURAAVAN PAINIKKEEN Kï¿½SITTELY VASTAAVASTI KUIN YLLï¿½ OLEVA  */
 
 }
 /****************************************************************************************/
-/* Kokonaislukumuuttujan muunto ascii-merkeiksi näyttöpuskuriin  				*/
+/* Kokonaislukumuuttujan muunto ascii-merkeiksi nï¿½yttï¿½puskuriin  				*/
 
 void nayta (long arvo, uint8_t paikka, uint8_t dig_lkm) 
 {
@@ -190,16 +190,16 @@ int main (void)
   DDRA = 0x40;			/* PA6 out = releohjaus, PA0...4 in kytkimet B1...5 */
   DDRB = 0xFF;			/* kaikki output, PB5=oc1a, PB6=oc1b */
   DDRC = 0xFF;			/* LCD: D7 D6 D5 D4 nc E RW RS */
-  dindex = 0xFF;			/* Näyttöpuskurin tulostusindeksi = -1 */
-  tulostus_kesken = 0;		/* Näytölle tulostusta ei ole aloitettu */
-  rivinsiirto = 0;			/* Näytön tulostuksessa ei ole annettu rivinsiirtokomentoa */
-  kopioi_mjono(db,alkuteksti);	/* Kopioidaan näyttöpuskuriin alkuarvot */
+  dindex = 0xFF;			/* Nï¿½yttï¿½puskurin tulostusindeksi = -1 */
+  tulostus_kesken = 0;		/* Nï¿½ytï¿½lle tulostusta ei ole aloitettu */
+  rivinsiirto = 0;			/* Nï¿½ytï¿½n tulostuksessa ei ole annettu rivinsiirtokomentoa */
+  kopioi_mjono(db,alkuteksti);	/* Kopioidaan nï¿½yttï¿½puskuriin alkuarvot */
   lcd_init();				/* LCD:lle alustuskomentosekvenssi */
 
-  KesHetki = 20000;		/* Ekan OCR1A-keskeytyksen ajanhetki 10 ms resetistä*/
+  KesHetki = 20000;		/* Ekan OCR1A-keskeytyksen ajanhetki 10 ms resetistï¿½*/
   OCR1A = KesHetki;
 
-  oc1b_hetki = 30000;		/* Ekan OCR1B-keskeytyksen ajanhetki 15 ms resetistä*/
+  oc1b_hetki = 30000;		/* Ekan OCR1B-keskeytyksen ajanhetki 15 ms resetistï¿½*/
   OCR1B = oc1b_hetki;
   
   tilan_1_kesto = 100; 		/* Kanttigeneraattorin 1-tilan kesto 50us */
@@ -210,60 +210,60 @@ int main (void)
   TIMSK = 0b00111100;		/* TIMSK = 0x1C; TIMSK = (1<<TICIE1)+(1<<OCIE1A)+(1<<OCIE1B)+(1<<TOIE1);*/
   sei();
 
-  while (1)				// PÄÄOHJELMASILMUKKA
+  while (1)				// Pï¿½ï¿½OHJELMASILMUKKA
   {
-	if (KeskLippu == 1)	{	// Ehto toteutuu 10 ms välein, timer1_compa-keskeytys asettaa
+	if (KeskLippu == 1)	{	// Ehto toteutuu 10 ms vï¿½lein, timer1_compa-keskeytys asettaa
 		KeskLippu = 0;
 		painiketoiminnot();	// Kytkintilojen luenta ja kunkin painikkeen tilan mukainen toiminto
 
-		Laskuri_02s--;					// 0,2 sekunnin välein tehdään seuraavia asioita:
+		Laskuri_02s--;					// 0,2 sekunnin vï¿½lein tehdï¿½ï¿½n seuraavia asioita:
 		if (Laskuri_02s == 0) {
 			Laskuri_02s = 20;
-			if (tulostus_kesken == 0) {		// Jos näyttöpuskurin tulostus ei ole meneillään ja
+			if (tulostus_kesken == 0) {		// Jos nï¿½yttï¿½puskurin tulostus ei ole meneillï¿½ï¿½n ja
 				if ((jakso>>1)<10000000) {		// jos mitattu jaksonaika on pienempi kuin 10 s, niin
-					nayta(jakso>>1,16,7);		// muunnetaan jaksonaika näyttöpuskuriin ASCII-merkkijonoksi
-					db[24]='u';			// ja laitetaan perään yksiköksi mikrosekunti
+					nayta(jakso>>1,16,7);		// muunnetaan jaksonaika nï¿½yttï¿½puskuriin ASCII-merkkijonoksi
+					db[24]='u';			// ja laitetaan perï¿½ï¿½n yksikï¿½ksi mikrosekunti
 					db[25]='s';
 				}
 				else {
-					nayta((jakso>>1)/1000,16,7);	// Jaksonajan näyttö LCD:llä yksikkönä ms, jos
+					nayta((jakso>>1)/1000,16,7);	// Jaksonajan nï¿½yttï¿½ LCD:llï¿½ yksikkï¿½nï¿½ ms, jos
 					db[24]='m';				// jaksonaika onkin suurempi kuin 10 s.
 					db[25]='s';
 				}
-				tulostus_kesken = 1;		// Näyttöpuskurin tulostuksen käynnistys 0,2 s välein	
+				tulostus_kesken = 1;		// Nï¿½yttï¿½puskurin tulostuksen kï¿½ynnistys 0,2 s vï¿½lein	
 				cli();
-				lcd_aika = TCNT1 + 200;		// Ensimmäisen merkin kirjoitus LCD:lle n.100 us kuluttua
+				lcd_aika = TCNT1 + 200;		// Ensimmï¿½isen merkin kirjoitus LCD:lle n.100 us kuluttua
 				sei();
 			}
 		}
-		else {							// Millaisin aikavälein tehdään seuraavat asiat?
+		else {							// Millaisin aikavï¿½lein tehdï¿½ï¿½n seuraavat asiat?
 			if (naytolle==1) {				// Jos kaappauskeskeytys on laskenut tarvittavat alkutiedot
 				naytolle =0;
 				if(f_ovf==0) {						// ja jos ei ole ylivuototilanne, niin
 				    ftaajuus=jaksolkm/(laskentajakso * 0.5e-6);	// lasketaan taajuus. (268,63 us)
-				    fnayta(ftaajuus,0,6);				// Näytölle taajuus, 6 merk. digittiä. (2063,8 us)
+				    fnayta(ftaajuus,0,6);				// Nï¿½ytï¿½lle taajuus, 6 merk. digittiï¿½. (2063,8 us)
 				}
 				else {
 				    db[0]='-';db[1]='-';db[2]='-';			// Jos mitattava taajuus on liian suuri,
-				    db[3]='-';db[4]='-';db[5]='-';db[6]='-';		// näyttöön ------------
+				    db[3]='-';db[4]='-';db[5]='-';db[6]='-';		// nï¿½yttï¿½ï¿½n ------------
 				}
 			}
 		}
-		Laskuri_1s--;					// Yhden sekunnin välein tehdään seuraavat asiat:
+		Laskuri_1s--;					// Yhden sekunnin vï¿½lein tehdï¿½ï¿½n seuraavat asiat:
 		if (Laskuri_1s == 0) {
 			Laskuri_1s = 100;
-//			PORTA = PORTA ^ 0x40;		// Releen tilan vaihto 1 s välein
+//			PORTA = PORTA ^ 0x40;		// Releen tilan vaihto 1 s vï¿½lein
 			f_ovf=0;					// Nollataan mitatun taajuuden mahdollinen ylivuototilanne
   			TIMSK |= 0b00100000;		//1<<TICIE1;  //    ja sallitaan taas kaappauskeskeytykset 
 		}
 	}
-	else {  // vaikka 10ms keskeytyslippu ei olekaan pystyssä, kirjoitetaan näytölle vuorossa oleva merkki, jos
-		if (tulostus_kesken == 1) {			// Jos näyttöpuskurin tulostus on kesken
-	 		cli();					// Miksi tässä on keskeytyskielto?
-			nyt_aika = TCNT1;			// Luetaan Timer1:stä tämänhetkinen aika
+	else {  // vaikka 10ms keskeytyslippu ei olekaan pystyssï¿½, kirjoitetaan nï¿½ytï¿½lle vuorossa oleva merkki, jos
+		if (tulostus_kesken == 1) {			// Jos nï¿½yttï¿½puskurin tulostus on kesken
+	 		cli();					// Miksi tï¿½ssï¿½ on keskeytyskielto?
+			nyt_aika = TCNT1;			// Luetaan Timer1:stï¿½ tï¿½mï¿½nhetkinen aika
 			sei();
-			if (nyt_aika-lcd_aika > 0){			// Jos timeri on ohittanut näytölle tulostuksessa tarvittavan 100us 
-				LCD_lle_puskurista_merkki ();		// merkkiväliajan, kirjoitetaan näyttöpuskurista vuorossa oleva merkki LCD:lle
+			if (nyt_aika-lcd_aika > 0){			// Jos timeri on ohittanut nï¿½ytï¿½lle tulostuksessa tarvittavan 100us 
+				LCD_lle_puskurista_merkki ();		// merkkivï¿½liajan, kirjoitetaan nï¿½yttï¿½puskurista vuorossa oleva merkki LCD:lle
 			}	// if (nyt_aika-lcd_aika>0)
 		}		// if (tulostus_kesken==1)
 	}		// else
@@ -271,7 +271,7 @@ int main (void)
 }		 	// main
 
 /****************************************************************************************/
-/* Reaalilukumuuttujan muunto asciimerkeiksi näyttöpuskuriin tyyliin 357.629Hz tai .076928Hz	*/
+/* Reaalilukumuuttujan muunto asciimerkeiksi nï¿½yttï¿½puskuriin tyyliin 357.629Hz tai .076928Hz	*/
 
 void fnayta (float arvo, uint8_t paikka, uint8_t dig_lkm)
 {
@@ -303,11 +303,11 @@ void fnayta (float arvo, uint8_t paikka, uint8_t dig_lkm)
 }
 
 /***************************************************************/
-/* LCD-näytölle E-signaalin pulssi                             */
+/* LCD-nï¿½ytï¿½lle E-signaalin pulssi                             */
 void epulssi (void) __attribute__ ((noinline));
 void epulssi (void)
 {	volatile char i = 2;
-	PORTC |= 0x04;			// E-signaali ylös
+	PORTC |= 0x04;			// E-signaali ylï¿½s
 	while (i>0) i--;			// Noin mikrosekunnin viive
 	PORTC &= ~0x04;			// E-signaali alas
 }
@@ -316,9 +316,9 @@ void epulssi (void)
 
 void lcd_ohjaus (uint8_t tyyppi, uint8_t data)	// LCD: D7 D6 D5 D4 nc E RW RS
 {
-	PORTC = (data & 0xF0) | (PORTC & 0x0E)| tyyppi;		// merkin 4 MSB:tä LCD:lle
+	PORTC = (data & 0xF0) | (PORTC & 0x0E)| tyyppi;		// merkin 4 MSB:tï¿½ LCD:lle
 	epulssi();
-	PORTC = (data<<4) | (PORTC & 0x0F);			// merkin 4 LSB:tä LCD:lle
+	PORTC = (data<<4) | (PORTC & 0x0F);			// merkin 4 LSB:tï¿½ LCD:lle
 	epulssi();  
 }
 /****************************************************************************/
@@ -335,7 +335,7 @@ void viive_ms (volatile uint8_t aika)
 	}
 }
 /*******************************************************************************/
-/* Nestekidenäyttömodulin vaatima alustus sähkön kytkemisen jälkeen       */
+/* Nestekidenï¿½yttï¿½modulin vaatima alustus sï¿½hkï¿½n kytkemisen jï¿½lkeen       */
 
 void lcd_init(void)
 {
@@ -344,7 +344,7 @@ void lcd_init(void)
   PORTC = 0x30; epulssi(); viive_ms(6); 	//Function set, minimiviive 4100 us
   PORTC = 0x30; epulssi(); viive_ms(6); 	//Function set, minimiviive 100 us
   PORTC = 0x30; epulssi(); viive_ms(2); 	//Function set, minimiviive 42 us
-  PORTC = 0x20; epulssi(); viive_ms(2); 	//Function set, väylä 4-bittiseksi, minimiviive 42 us
+  PORTC = 0x20; epulssi(); viive_ms(2); 	//Function set, vï¿½ylï¿½ 4-bittiseksi, minimiviive 42 us
 
   lcd_ohjaus(0,0x28); viive_ms(2);	//Function set,  4bit, 2rivinen, minimiviive 42 us
   lcd_ohjaus(0,0x08); viive_ms(2);	//display off,curs off, blink off, minimiviive 42 us
@@ -355,29 +355,29 @@ void lcd_init(void)
 }
 
 /**********************************************************************************************/
-/* Näyttöpuskurista vuorossa olevan yhden ASCII-merkin tai kursorinsiirtokomennon kirjoitus LCD-moduliin  */
+/* Nï¿½yttï¿½puskurista vuorossa olevan yhden ASCII-merkin tai kursorinsiirtokomennon kirjoitus LCD-moduliin  */
 
 void LCD_lle_puskurista_merkki (void)
 {
-	dindex++;						// Kasvata näyttöpuskurin indeksiä
+	dindex++;						// Kasvata nï¿½yttï¿½puskurin indeksiï¿½
 	switch (dindex)
 	{
-	case 16:						// Jos ylärivi on kirjoitetu täyteen
-		if (rivinsiirto == 0) {			// ja jos rivinsiirtokomentoa ei vielä ole annettu
+	case 16:						// Jos ylï¿½rivi on kirjoitetu tï¿½yteen
+		if (rivinsiirto == 0) {			// ja jos rivinsiirtokomentoa ei vielï¿½ ole annettu
 			rivinsiirto = 1;
-			dindex--;				//   peruutetaan indeksiä takaisin
+			dindex--;				//   peruutetaan indeksiï¿½ takaisin
 			lcd_ohjaus (0, 0xC0);		//   kursorin siirtokomento alarivin alkuun
 		}
 		else {						// Kun rivinsiirtokomento on kirjoitettu
 			rivinsiirto = 0;
-			lcd_ohjaus (1, db[dindex]);	// kirjoitetaan alarivin ensimmäinen merkki
+			lcd_ohjaus (1, db[dindex]);	// kirjoitetaan alarivin ensimmï¿½inen merkki
 		}
 		break;
 	case 32:						// Koko puskurillinen on kirjoitettu
 		tulostus_kesken = 0;			// Merkkijonon tulostus valmistui
 		dindex = 0xFF;				// Puskurin indeksin palautus alkuun, arvoksi -1
-		lcd_ohjaus (0, 0x80);			// LCD:lle kursorinsiirtokomento ylärivin alkuun
-		return;					// Pois täältä laskematta seuraavaa merkkiväliaikaa
+		lcd_ohjaus (0, 0x80);			// LCD:lle kursorinsiirtokomento ylï¿½rivin alkuun
+		return;					// Pois tï¿½ï¿½ltï¿½ laskematta seuraavaa merkkivï¿½liaikaa
 		break;
 	default:
 		lcd_ohjaus (1, db[dindex]);		// Vuorossa olevan ASCII-merkin kirjoitus LCD:lle
@@ -386,16 +386,16 @@ void LCD_lle_puskurista_merkki (void)
 	cli();
 	nyt_aika = TCNT1;		
 	sei();
-	lcd_aika = nyt_aika + 200; 	// Seuraavan merkin tai komennon kirjoitusajankohdan laskenta 100 us päähän
+	lcd_aika = nyt_aika + 200; 	// Seuraavan merkin tai komennon kirjoitusajankohdan laskenta 100 us pï¿½ï¿½hï¿½n
 }
 /*******************************************************************/
-/* Merkkijonon kopiointi 16-bittisestä FLASH-ohjelmamuistista 8-bittiseen SRAMmiin                 */
+/* Merkkijonon kopiointi 16-bittisestï¿½ FLASH-ohjelmamuistista 8-bittiseen SRAMmiin                 */
 
 void kopioi_mjono (volatile uint8_t *kohde, const uint8_t *lahde)
 {
 	uint8_t i = 0;
-	while (pgm_read_byte (&(lahde[i])) != '\0') {		// Kunnes ohjelmamuistista löytyy NUL-merkki
-		kohde[i] = pgm_read_byte (&(lahde[i]));	// luetaan indeksin osoittama merkki FLASHissä olevasta taulukosta kohdetaulukkoon
-		i++;							// Kasvatetaan indeksiä.
+	while (pgm_read_byte (&(lahde[i])) != '\0') {		// Kunnes ohjelmamuistista lï¿½ytyy NUL-merkki
+		kohde[i] = pgm_read_byte (&(lahde[i]));	// luetaan indeksin osoittama merkki FLASHissï¿½ olevasta taulukosta kohdetaulukkoon
+		i++;							// Kasvatetaan indeksiï¿½.
 	}
 }
